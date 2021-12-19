@@ -7,8 +7,9 @@ app.use(express.json());
 
 const costumers = [];
 
-// Middleware
+// -- Middleware
 
+// Verifies if the costumer exists
 function verifyIfAccountExistsCPF(request, response, next) {
   const { cpf } = request.headers;
   const costumer = costumers.find(costumer => costumer.cpf === cpf);
@@ -21,12 +22,33 @@ function verifyIfAccountExistsCPF(request, response, next) {
   return next();
 }
 
-// Caminhos
+// -- Functions
 
-app.get("/account", (request, response) => {
-    return response.status(200).json(costumers);
+// Calculates the total value of the costumer's account
+function getBalance(statement) {
+    const balance = statement.reduce((accumulator, transaction) => {
+      switch (transaction.type) {
+        case 'credit':
+          return accumulator + transaction.amount;
+        case 'debit':
+          return accumulator - transaction.amount;
+        default:
+          return accumulator;
+      }
+    }, 0);
+
+    return balance;
+}
+
+// -- Paths:
+
+// Gets an existing costumer
+app.get("/account", verifyIfAccountExistsCPF, (request, response) => {
+    const { costumer } = request;
+    return response.status(200).json(costumer);
 });
 
+// Creates a new costumer
 app.post("/account", (request, response) => {
     const { name, cpf } = request.body;
 
@@ -48,6 +70,7 @@ app.post("/account", (request, response) => {
     return response.status(201).send();
 });
 
+// Modifies an existing costumer
 app.put("/account", verifyIfAccountExistsCPF, (request, response) => {
     const { name } = request.body;
     const { costumer } = request;
@@ -57,6 +80,7 @@ app.put("/account", verifyIfAccountExistsCPF, (request, response) => {
     return response.status(200).send();
 })
 
+// Deletes an existing costumer
 app.delete("/account", (request, response) => {
     const { cpf } = request.headers;
 
@@ -71,12 +95,14 @@ app.delete("/account", (request, response) => {
     return response.status(204).send();
 });
 
+// Lists all statements of an existing costumer
 app.get("/statement", verifyIfAccountExistsCPF, (request, response) => {
     const { costumer } = request;
 
     return response.status(200).json(costumer.statement);
 });
 
+// Creates a new deposit statement for an existing costumer
 app.post("/deposit", verifyIfAccountExistsCPF, (request, response) => {
     const { description, amount } = request.body;
     const { costumer } = request;
@@ -94,6 +120,7 @@ app.post("/deposit", verifyIfAccountExistsCPF, (request, response) => {
     return response.status(201).send();
 });
 
+// Creates a new withdraw statement for an existing
 app.post("/withdraw", verifyIfAccountExistsCPF, (request, response) => {
     const { description, amount } = request.body;
     const { costumer } = request;
@@ -111,6 +138,7 @@ app.post("/withdraw", verifyIfAccountExistsCPF, (request, response) => {
     return response.status(201).send();
 });
 
+// Lists all of the statements of an existing costumer on a specific date
 app.get("/statement/date", verifyIfAccountExistsCPF, (request, response) => {
     const { costumer } = request;
     const { date } = request.query;
@@ -121,4 +149,14 @@ app.get("/statement/date", verifyIfAccountExistsCPF, (request, response) => {
     return response.json(statement);
 });
 
+// Calculates the balance of an existing costumer
+app.get("/balance", verifyIfAccountExistsCPF, (request, response) => {
+    const { costumer } = request;
+
+    const balance = getBalance(costumer.statement);
+
+    return response.json({ balance: balance });
+})
+
+// Listens to port 3333
 app.listen(3333);
