@@ -25,7 +25,7 @@ function verifyIfAccountExistsCPF(request, response, next) {
 
 app.get("/account", (request, response) => {
     return response.status(200).json(costumers);
-})
+});
 
 app.post("/account", (request, response) => {
     const { name, cpf } = request.body;
@@ -46,13 +46,36 @@ app.post("/account", (request, response) => {
     costumers.push(costumer);
 
     return response.status(201).send();
+});
+
+app.put("/account", verifyIfAccountExistsCPF, (request, response) => {
+    const { name } = request.body;
+    const { costumer } = request;
+
+    costumer.name = name;
+
+    return response.status(200).send();
 })
+
+app.delete("/account", (request, response) => {
+    const { cpf } = request.headers;
+
+    const costumerIndex = costumers.findIndex( costumer => costumer.cpf === cpf );
+
+    if (costumerIndex < 0) {
+        return response.status(400).json({ error: "Costumer not found" });
+    }
+
+    costumers.splice(costumerIndex, 1);
+
+    return response.status(204).send();
+});
 
 app.get("/statement", verifyIfAccountExistsCPF, (request, response) => {
     const { costumer } = request;
 
     return response.status(200).json(costumer.statement);
-})
+});
 
 app.post("/deposit", verifyIfAccountExistsCPF, (request, response) => {
     const { description, amount } = request.body;
@@ -69,7 +92,7 @@ app.post("/deposit", verifyIfAccountExistsCPF, (request, response) => {
     costumer.statement.push(deposit);
 
     return response.status(201).send();
-})
+});
 
 app.post("/withdraw", verifyIfAccountExistsCPF, (request, response) => {
     const { description, amount } = request.body;
@@ -86,6 +109,16 @@ app.post("/withdraw", verifyIfAccountExistsCPF, (request, response) => {
     costumer.statement.push(withdraw);
 
     return response.status(201).send();
-})
+});
+
+app.get("/statement/date", verifyIfAccountExistsCPF, (request, response) => {
+    const { costumer } = request;
+    const { date } = request.query;
+
+    const dateFormat = new Date(date + " 00:00");
+
+    const statement = costumer.statement.filter( statement => statement.date.toDateString() === new Date(dateFormat).toDateString() );
+    return response.json(statement);
+});
 
 app.listen(3333);
